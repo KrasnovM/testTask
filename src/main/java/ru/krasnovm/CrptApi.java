@@ -15,8 +15,7 @@ public class CrptApi {
     private final TimeUnit timeUnit;
     private final int requestLimit;
     private final Deque<Long> requests;
-    //public static final StringBuilder BASE_URL = new StringBuilder("https://ismp.ru");
-    public static final StringBuilder BASE_URL = new StringBuilder("https://localhost");
+    public static final StringBuilder BASE_URL = new StringBuilder("https://ismp.ru");
 
     public CrptApi(TimeUnit timeUnit, int requestLimit) {
         this.timeUnit = timeUnit;
@@ -231,76 +230,4 @@ public class CrptApi {
         }
     }
 
-    //testing
-    public static void main(String[] args) {
-        final String jsonDoc = getJsonDocString();
-
-        CrptApi api = new CrptApi(TimeUnit.SECONDS, 2);
-
-        ExecutorService executorService = Executors.newFixedThreadPool(10);
-        Runnable runnable = () -> {
-            int res = api.createDocumentForProduct(jsonDoc, "signed");
-
-            switch (res) {
-                case 1 -> System.out.println("success");
-                case 0 -> System.out.println("request was failed");
-                case -1 -> System.out.println("too many requests");
-            }
-        };
-        executorService.submit(runnable);
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        executorService.submit(runnable);
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        executorService.submit(runnable);
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        executorService.shutdown();
-    }
-
-    private static String getJsonDocString() {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode rootNode = mapper.createObjectNode();
-
-        ObjectNode description = mapper.createObjectNode();
-        description.put("participantInn", "string");
-        rootNode.set("description", description);
-
-        rootNode.put("doc_id", "string");
-        rootNode.put("doc_status", "string");
-        rootNode.put("doc_type", "LP_INTRODUCE_GOODS");
-        rootNode.put("importRequest", true);
-        rootNode.put("owner_inn", "string");
-        rootNode.put("participant_inn", "string");
-        rootNode.put("producer_inn", "string");
-        rootNode.put("production_date", "2020");
-        rootNode.put("production_type", "string");
-
-        ObjectNode products = mapper.createObjectNode();
-        products.put("certificate_document", "string");
-        products.put("certificate_document_date", "2020-01-23");
-        products.put("certificate_document_number", "string");
-        products.put("owner_inn", "string");
-        products.put("producer_inn", "string");
-        products.put("production_date", "2020-01-23");
-        products.put("tnved_code", "string");
-        products.put("uit_code", "string");
-        products.put("uitu_code", "string");
-        rootNode.set("products", products);
-
-        rootNode.put("reg_date", "2020-01-23");
-        rootNode.put("reg_number", "string");
-
-        return rootNode.toPrettyString();
-    }
 }
