@@ -6,31 +6,29 @@ import okhttp3.*;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.concurrent.*;
 
 public class CrptApi {
     private final TimeUnit timeUnit;
     private final int requestLimit;
-    private final BlockingDeque<Long> requests;
+    private final Deque<Long> requests;
     //public static final StringBuilder BASE_URL = new StringBuilder("https://ismp.ru");
     public static final StringBuilder BASE_URL = new StringBuilder("https://localhost");
 
     public CrptApi(TimeUnit timeUnit, int requestLimit) {
         this.timeUnit = timeUnit;
         this.requestLimit = Math.max(requestLimit, 0);
-        requests = new LinkedBlockingDeque<>();
+        requests = new LinkedList<>();
     }
 
-    public int createDocumentForProduct(String jsonDocument, String signature) {
+    public int createDocumentForProduct(JsonDoc jsonDocument, String signature) {
         synchronized (this) {
-
             if (!requests.isEmpty()) {
                 while (requests.peekFirst() - requests.peekLast() > timeUnit.toMillis(1)) {
-                    try {
-                        requests.takeLast();
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
+                    requests.pollLast();
                 }
             }
 
@@ -49,7 +47,7 @@ public class CrptApi {
         return 0; //request wasn't successful
     }
 
-    private int savePostRequest(String jsonDocument, String signature) {
+    private int savePostRequest(JsonDoc jsonDocument, String signature) {
         final MediaType JSON = MediaType.get("application/json; charset=utf-8");
         final String path = "/api/v3/lk/documents/create";
 
@@ -61,7 +59,10 @@ public class CrptApi {
                 .build();
 
         //forming request
-        RequestBody requestBody = RequestBody.create(jsonDocument, JSON);
+        RequestBody requestBody = RequestBody.create(
+                createJsonString(jsonDocument),
+                JSON
+        );
         Request request = new Request.Builder()
                 .url(BASE_URL.append(path).toString())
                 .addHeader("Content-Type", "application/json")
@@ -81,6 +82,153 @@ public class CrptApi {
             System.out.println("Ошибка подключения: " + e);
         }
         return -1;
+    }
+
+    private String createJsonString(JsonDoc jsonDoc) {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode rootNode = mapper.createObjectNode();
+
+        ObjectNode description = mapper.createObjectNode();
+        description.put("participantInn", jsonDoc.getParticipantInn());
+        rootNode.set("description", description);
+
+        rootNode.put("doc_id", jsonDoc.getDocId());
+        rootNode.put("doc_status", jsonDoc.getDocStatus());
+        rootNode.put("doc_type", jsonDoc.getDocType());
+        rootNode.put("importRequest", jsonDoc.getImportRequest());
+        rootNode.put("owner_inn", jsonDoc.getOwnerInn());
+        rootNode.put("participant_inn", jsonDoc.getParticipantInn());
+        rootNode.put("producer_inn", jsonDoc.getProducerInn());
+        rootNode.put("production_date", jsonDoc.getProductionDate().toString());
+        rootNode.put("production_type", jsonDoc.getProductionType());
+
+        ObjectNode products = mapper.createObjectNode();
+        products.put("certificate_document", jsonDoc.getCertificateDocument());
+        products.put("certificate_document_date", jsonDoc.getCertificateDocumentDate().toString());
+        products.put("certificate_document_number", jsonDoc.getCertificateDocumentNumber());
+        products.put("owner_inn", jsonDoc.getOwnerInn());
+        products.put("producer_inn", jsonDoc.getProducerInn());
+        products.put("production_date", jsonDoc.getProductionDate().toString());
+        products.put("tnved_code", jsonDoc.getTnvedCode());
+        products.put("uit_code", jsonDoc.getUitCode());
+        products.put("uitu_code", jsonDoc.getUituCode());
+        rootNode.set("products", products);
+
+        rootNode.put("reg_date", jsonDoc.getRegDate().toString());
+        rootNode.put("reg_number", jsonDoc.getRegNumber());
+
+        return rootNode.toPrettyString();
+    }
+
+    public static class JsonDoc {
+        private final String participantInn;
+        private final String docId;
+        private final String docStatus;
+        private final String docType;
+        private final Boolean importRequest;
+        private final String ownerInn;
+        private final String producerInn;
+        private final Date productionDate;
+        private final String productionType;
+        private final String certificateDocument;
+        private final Date certificateDocumentDate;
+        private final String certificateDocumentNumber;
+        private final String tnvedCode;
+        private final String uitCode;
+        private final String uituCode;
+        private final Date regDate;
+        private final String regNumber;
+
+        public JsonDoc(String participantInn, String docId, String docStatus, String docType, Boolean importRequest,
+                       String ownerInn, String producerInn, Date productionDate, String productionType,
+                       String certificateDocument, Date certificateDocumentDate, String certificateDocumentNumber,
+                       String tnvedCode, String uitCode, String uituCode, Date regDate, String regNumber) {
+            this.participantInn = participantInn;
+            this.docId = docId;
+            this.docStatus = docStatus;
+            this.docType = docType;
+            this.importRequest = importRequest;
+            this.ownerInn = ownerInn;
+            this.producerInn = producerInn;
+            this.productionDate = productionDate;
+            this.productionType = productionType;
+            this.certificateDocument = certificateDocument;
+            this.certificateDocumentDate = certificateDocumentDate;
+            this.certificateDocumentNumber = certificateDocumentNumber;
+            this.tnvedCode = tnvedCode;
+            this.uitCode = uitCode;
+            this.uituCode = uituCode;
+            this.regDate = regDate;
+            this.regNumber = regNumber;
+        }
+
+        public String getParticipantInn() {
+            return participantInn;
+        }
+
+        public String getDocId() {
+            return docId;
+        }
+
+        public String getDocStatus() {
+            return docStatus;
+        }
+
+        public String getDocType() {
+            return docType;
+        }
+
+        public Boolean getImportRequest() {
+            return importRequest;
+        }
+
+        public String getOwnerInn() {
+            return ownerInn;
+        }
+
+        public String getProducerInn() {
+            return producerInn;
+        }
+
+        public Date getProductionDate() {
+            return productionDate;
+        }
+
+        public String getProductionType() {
+            return productionType;
+        }
+
+        public String getCertificateDocument() {
+            return certificateDocument;
+        }
+
+        public Date getCertificateDocumentDate() {
+            return certificateDocumentDate;
+        }
+
+        public String getCertificateDocumentNumber() {
+            return certificateDocumentNumber;
+        }
+
+        public String getTnvedCode() {
+            return tnvedCode;
+        }
+
+        public String getUitCode() {
+            return uitCode;
+        }
+
+        public String getUituCode() {
+            return uituCode;
+        }
+
+        public Date getRegDate() {
+            return regDate;
+        }
+
+        public String getRegNumber() {
+            return regNumber;
+        }
     }
 
     //testing
